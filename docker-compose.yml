@@ -1,0 +1,44 @@
+services:
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: zentrapay-postgres
+    environment:
+      POSTGRES_DB: zentrapay_dev
+      POSTGRES_USER: zentrapay_user
+      POSTGRES_PASSWORD: zentrapay_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zentrapay_user -d zentrapay_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: zentrapay-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/zentrapay_dev
+      DB_USERNAME: zentrapay_user
+      DB_PASSWORD: zentrapay_dev_password
+      JWT_SECRET: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+      JWT_EXPIRATION: 86400000
+      RESEND_API_KEY: re_placeholder
+      RESEND_FROM_EMAIL: noreply@zentrapay.com
+      SERVER_PORT: 8080
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local

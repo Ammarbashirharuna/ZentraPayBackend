@@ -1,44 +1,26 @@
+# Environment files - NEVER commit these
+.env
+.env.local
+*.env
 
-HELP.md
+# Java
 target/
-!.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
+*.jar
+*.class
 
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
-
-### IntelliJ IDEA ###
-.idea
-*.iws
+# IDE
+.idea/
 *.iml
-*.ipr
-
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
-
-### VS Code ###
 .vscode/
 
-### Environment Variables (NEVER COMMIT) ###
-.env
-.env.*
-!.env.example
+# OS
+.DS_Store
+Thumbs.db
 
-### Production Configs ###
-application-prod.properties
-application-production.properties
-application-local.properties
+# Logs
+logs/
+*.log
+
+# Node
+node_modules/
+.next/

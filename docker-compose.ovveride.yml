@@ -1,0 +1,9 @@
+# Local development overrides
+# This file is automatically loaded by docker compose
+# Do NOT commit sensitive values here
+
+services:
+  backend:
+    environment:
+      APP_ENV: development
+      JAVA_OPTS: "-Xmx512m -Xms256m"
