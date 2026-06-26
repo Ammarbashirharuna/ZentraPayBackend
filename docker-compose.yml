@@ -4,15 +4,15 @@ services:
     image: postgres:17-alpine
     container_name: zentrapay-postgres
     environment:
-      POSTGRES_DB: zentrapay_dev
-      POSTGRES_USER: zentrapay_user
-      POSTGRES_PASSWORD: zentrapay_dev_password
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U zentrapay_user -d zentrapay_dev"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -27,14 +27,15 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      DB_URL: jdbc:postgresql://postgres:5432/zentrapay_dev
-      DB_USERNAME: zentrapay_user
-      DB_PASSWORD: zentrapay_dev_password
-      JWT_SECRET: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
-      JWT_EXPIRATION: 86400000
-      RESEND_API_KEY: re_placeholder
-      RESEND_FROM_EMAIL: noreply@zentrapay.com
-      SERVER_PORT: 8080
+      DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL}
+      SERVER_PORT: ${SERVER_PORT}
+      APP_BASE_URL: ${APP_BASE_URL}
     ports:
       - "8080:8080"
     restart: unless-stopped
