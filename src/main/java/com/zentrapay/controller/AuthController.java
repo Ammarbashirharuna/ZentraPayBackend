@@ -11,24 +11,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-/**
- * Authentication Controller
- *
- * REST API endpoints for authentication:
- * - POST /api/v1/auth/register - Register new user
- * - POST /api/v1/auth/login - Login existing user
- *
- * Controller Layer Responsibilities:
- * - Receive HTTP requests
- * - Validate input (using @Valid)
- * - Call service layer
- * - Return HTTP responses
- */
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
@@ -37,92 +21,69 @@ public class AuthController {
 
     private final AuthService authService;
 
-    /**
-     * Register new user
-     *
-     * Request Body:
-     * {
-     *   "email": "ammar@gmail.com",
-     *   "password": "MyP@ssw0rd",
-     *   "fullName": "Ammar Haruna"
-     * }
-     *
-     * Response (201 Created):
-     * {
-     *   "success": true,
-     *   "message": "User registered successfully",
-     *   "data": {
-     *     "token": "eyJhbGci...",
-     *     "tokenType": "Bearer",
-     *     "expiresAt": "2026-01-29T10:30:00",
-     *     "user": {
-     *       "id": "123e4567-...",
-     *       "email": "ammar@gmail.com",
-     *       "fullName": "Ammar Haruna",
-     *       "emailVerified": false
-     *     }
-     *   }
-     * }
-     *
-     * @param request Registration data
-     * @return AuthResponse wrapped in ApiResponse
-     */
     @PostMapping("/register")
     @Operation(
             summary = "Register new user",
-            description = "Create a new user account with email and password"
+            description = "Create a new user account. Returns JWT token immediately. Email verification required before login."
     )
     public ResponseEntity<ApiResponse<AuthResponse>> register(
             @Valid @RequestBody RegisterRequest request
     ) {
         AuthResponse response = authService.register(request);
-
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(ApiResponse.success(
-                        response,
-                        "User registered successfully"
-                ));
+                .body(ApiResponse.success(response, "User registered successfully. Please verify your email."));
     }
 
-    /**
-     * Login existing user
-     *
-     * Request Body:
-     * {
-     *   "email": "ammar@gmail.com",
-     *   "password": "MyP@ssw0rd"
-     * }
-     *
-     * Response (200 OK):
-     * {
-     *   "success": true,
-     *   "message": "Login successful",
-     *   "data": {
-     *     "token": "eyJhbGci...",
-     *     "tokenType": "Bearer",
-     *     "expiresAt": "2026-01-29T10:30:00",
-     *     "user": { ... }
-     *   }
-     * }
-     *
-     * @param request Login credentials
-     * @return AuthResponse wrapped in ApiResponse
-     */
     @PostMapping("/login")
     @Operation(
             summary = "Login user",
-            description = "Authenticate user and return JWT token"
+            description = "Authenticate with email and password. Email must be verified first."
     )
+    @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200", description = "Login successful"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401", description = "Invalid email or password"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "403", description = "Email not verified - check your inbox"
+            )
+    })
     public ResponseEntity<ApiResponse<AuthResponse>> login(
             @Valid @RequestBody LoginRequest request
     ) {
         AuthResponse response = authService.login(request);
-
-        return ResponseEntity
-                .ok(ApiResponse.success(
-                        response,
-                        "Login successful"
-                ));
+        return ResponseEntity.ok(ApiResponse.success(response, "Login successful"));
+    }
+    /**
+     * Verify email address
+     *
+     * Called when user clicks the link in their verification email.
+     *
+     * URL example:
+     * GET /api/v1/auth/verify?token=a1b2c3d4e5f6...
+     *
+     * Success response:
+     * {
+     *   "success": true,
+     *   "message": "Email verified successfully. You can now login."
+     * }
+     */
+    @GetMapping("/verify")
+    @Operation(
+            summary = "Verify email address",
+            description = "Verifies user email using the token sent to their inbox"
+    )
+    public ResponseEntity<ApiResponse<String>> verifyEmail(
+            @RequestParam String token
+    ) {
+        authService.verifyEmail(token);
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "Email verified successfully. You can now login."
+                )
+        );
     }
 }
