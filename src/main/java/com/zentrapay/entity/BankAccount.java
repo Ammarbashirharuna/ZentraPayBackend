@@ -80,8 +80,9 @@ public class BankAccount {
 
     // Is this bank account active?
     // Seller might deactivate it temporarily
+    @Builder.Default
     @Column(nullable = false)
-    private Boolean isActive = true;
+    private Boolean isActive = true;;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

@@ -93,6 +93,19 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handle validation/business logic runtime errors
+     * Returns: 400 Bad Request (client error, not server error)
+     */
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<ApiResponse<Void>> handleRuntimeException(
+            RuntimeException ex
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
+    /**
      * Catch-all for any other exceptions
      * Returns: 500 Internal Server Error
      */

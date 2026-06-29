@@ -19,6 +19,7 @@ import java.util.UUID;
 public class AuthResponse {
 
     private String token;
+    @Builder.Default
     private String tokenType = "Bearer";
     private LocalDateTime expiresAt;
     private UserDTO user;
