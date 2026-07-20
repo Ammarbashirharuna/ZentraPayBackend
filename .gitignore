@@ -21,6 +21,8 @@ Thumbs.db
 logs/
 *.log
 
+./docs
+
 # Node
 node_modules/
 .next/
