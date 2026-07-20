@@ -32,7 +32,7 @@ public class SecurityConfig {
      * Anyone can access these without logging in:
      * - Auth endpoints (register, login, verify email)
      * - Public payment pages (payment link checkout)
-     * - Webhook endpoints (verified by Paystack signature, not JWT)
+     * - Webhook endpoints (verified by CashOnRails signature, not JWT)
      * - Swagger UI and documentation
      * - Health checks
      */
@@ -41,7 +41,7 @@ public class SecurityConfig {
             "/api/v1/auth/**",
             // Public payment pages
             "/api/v1/pay/**",
-            // Webhook endpoints (verified by signature, not JWT)
+            // Webhook endpoints (verified by CashOnRails signature, not JWT)
             "/api/v1/webhooks/**",
             // Swagger UI and documentation
             "/swagger-ui/**",
