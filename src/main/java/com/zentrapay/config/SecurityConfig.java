@@ -51,7 +51,9 @@ public class SecurityConfig {
             "/v3/api-docs/**",
             // Actuator health
             "/actuator/health",
-            "/actuator/info"
+            "/actuator/info",
+            // Rate limit info (public)
+            "/api/v1/health"
     };
 
     /**
@@ -69,27 +71,17 @@ public class SecurityConfig {
             JwtAuthenticationFilter jwtAuthenticationFilter
     ) throws Exception {
         http
-                // Disable CSRF
-                // Why? We use JWT tokens in Authorization header, not cookies
-                // CSRF attacks work through cookies, not headers
+                .cors(cors -> cors.configurationSource(
+                        request -> new org.springframework.web.cors.CorsConfiguration()
+                ))
                 .csrf(AbstractHttpConfigurer::disable)
-
-                // Stateless session management
-                // Why? Each request contains JWT token
-                // No server-side session storage needed
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
-
-                // Authorization rules
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(PUBLIC_URLS).permitAll()  // Public URLs
-                        .anyRequest().authenticated()               // Everything else needs JWT
+                        .requestMatchers(PUBLIC_URLS).permitAll()
+                        .anyRequest().authenticated()
                 )
-
-                // Add JWT filter
-                // This filter runs on every request
-                // It extracts the JWT token and validates it
                 .addFilterBefore(
                         jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class

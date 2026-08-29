@@ -85,6 +85,24 @@ public class PaymentLink {
     @Column(name = "redirect_url", columnDefinition = "TEXT")
     private String redirectUrl;
 
+    // ---- Checkout branding ----
+
+    /** Seller's logo URL displayed on the checkout page. */
+    @Column(name = "logo_url", columnDefinition = "TEXT")
+    private String logoUrl;
+
+    /** Primary brand color (hex, e.g. #FF5733). */
+    @Column(name = "brand_color", length = 7)
+    private String brandColor;
+
+    /** Accent color for buttons/highlights (hex). */
+    @Column(name = "accent_color", length = 7)
+    private String accentColor;
+
+    /** Custom thank-you message shown after successful payment. */
+    @Column(name = "thank_you_message", columnDefinition = "TEXT")
+    private String thankYouMessage;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

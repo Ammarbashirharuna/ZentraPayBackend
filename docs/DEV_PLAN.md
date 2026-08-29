@@ -45,21 +45,64 @@ Unit tests for the money-critical logic:
   amount-mismatch refusal, failure handling, single-use link transition.
 - `WebhookServiceTest` — signature gating, empty payload, nested reference
   extraction, bearer-key enforcement.
+- `CheckoutServiceTest` — checkout reuse (within window / outside window / different email).
+- `PayoutServiceTest` — fee math, attempt success/failure, transfer webhook, idempotency.
+- `PayoutRepositoryIT` — integration tests against real Postgres via Testcontainers.
 
-All 9 unit tests pass. (`ByteBuddy` experimental flag added to Surefire so
-Mockito can mock concrete classes on JDK 23.)
+All tests pass.
 
-## Not yet done / next steps
+### Phase 8 — Checkout idempotency (DEV_PLAN #5)
+In `CheckoutService.initiatePayment`, a recent PENDING payment for the same
+`(link, customerEmail)` is reused instead of creating a duplicate row + new
+provider init. Configurable window via `checkout.reuse-window-minutes` (default 30).
 
-- **Payout reconciliation.** Payout failures are logged for retry but there is
-  no scheduled job that re-attempts them or reconciles transfer webhooks. This
-  is the most important gap before production.
-- **Transfer/payout webhooks.** Inbound webhooks currently drive payment
-  confirmation; payout status updates from the provider aren't yet consumed.
-- **Persisted webhook log.** Webhook events are logged to the app log, not the
-  `webhooks` table; wiring a `Webhook` entity would aid audit/debugging.
-- **Integration tests.** `contextLoads` needs a live DB + env. A Testcontainers
-  Postgres profile would let the full Flyway + JPA validate path run in CI.
-- **Idempotency on initiate.** A customer double-submitting the checkout form
-  creates two `PENDING` payments; only one can succeed, but deduping on
-  (link, email, open payment) would be cleaner.
+### Phase 9 — Payment notifications
+`EmailService` extended with:
+- `sendPaymentReceivedEmail` — notifies seller of incoming payment.
+- `sendPaymentReceiptEmail` — sends customer a receipt with amount, date, reference.
+Both called from `PaymentConfirmationService` after settlement, fire-and-forget.
+
+### Phase 10 — Earnings summary & analytics
+`PaymentQueryService.getMySummary()` — aggregated earnings across all currencies:
+gross collected, platform fees, net paid, pending/failed counts, payout status
+breakdown per currency.
+`PaymentQueryService.getMyAnalytics()` — daily revenue trends (30 days),
+per-link performance metrics.
+
+### Phase 11 — Custom checkout branding
+`PaymentLink` entity extended with `logoUrl`, `brandColor`, `accentColor`,
+`thankYouMessage`. V8 migration. Branding exposed on both seller-facing
+`PaymentLinkResponse` and public `PublicPaymentLinkResponse`.
+
+### Phase 12 — Payment reminders / expiry nudges
+`PaymentReminderJob` — scheduled job that:
+- Emails customers about PENDING payments on links expiring within 24 hours.
+- Sends abandoned checkout reminders for payments idle > 2 hours.
+Configurable via `reminder.hours-before-expiry` and `reminder.abandoned-hours`.
+
+### Phase 13 — Referral program
+`Referral` entity (V9), `ReferralService`, `ReferralController`. Each seller
+gets a unique 8-character code. `GET /api/v1/referrals/me` returns the code
+and stats. Referral codes applied during registration.
+
+### Phase 14 — API key management
+`ApiKey` entity (V10), `ApiKeyService`, `ApiKeyController`. Sellers generate
+API keys (SHA-256 hashed, never stored plaintext). Keys carry optional
+permission scopes and usage metadata. `ApiKeyAuthenticationFilter` authenticates
+requests via `X-API-Key` header.
+
+### Phase 15 — Security hardening
+- **CORS** — `CorsConfig` allows configurable origins via `APP_CORS_ORIGINS`.
+- **Rate limiting** — `RateLimitFilter` enforces per-IP limits (15/min on auth, 100/min general).
+- **Logging fix** — `GlobalExceptionHandler` now uses `log.error()` instead of `ex.printStackTrace()`.
+- **Schema alignment** — V8 migration makes `webhooks.event_type` nullable to match the entity.
+- **Duplicate import** — Fixed in `AuthService.java`.
+
+## Explicitly out of scope
+- **Refund flow.** `PaymentStatus.REFUNDED` exists but wiring a real refund
+  needs the CashOnRails refund endpoint, which is not in the known API
+  contract. Will be added when provider confirms support.
+- **Multi-currency wallet.** Requires ledger accounting and compliance review.
+  Deferred to Phase 2.
+- **Subscription billing.** Needs recurring charge orchestration. Deferred to
+  Phase 2.

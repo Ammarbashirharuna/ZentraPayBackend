@@ -31,6 +31,7 @@ class PaymentConfirmationServiceTest {
     @Mock PaymentLinkRepository paymentLinkRepository;
     @Mock PaymentProvider paymentProvider;
     @Mock PayoutService payoutService;
+    @Mock EmailService emailService;
 
     @InjectMocks PaymentConfirmationService service;
 

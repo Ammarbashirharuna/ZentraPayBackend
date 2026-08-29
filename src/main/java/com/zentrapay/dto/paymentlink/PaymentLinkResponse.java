@@ -11,7 +11,7 @@ import java.util.UUID;
 
 /**
  * Payment link as returned to its owning seller (full detail, including the
- * shareable URL and usage counters).
+ * shareable URL, usage counters, and checkout branding).
  */
 @Data
 @Builder
@@ -36,6 +36,12 @@ public class PaymentLinkResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    // ---- Checkout branding ----
+    private String logoUrl;
+    private String brandColor;
+    private String accentColor;
+    private String thankYouMessage;
+
     public static PaymentLinkResponse from(PaymentLink link, String paymentUrl) {
         return PaymentLinkResponse.builder()
                 .id(link.getId())
@@ -53,6 +59,10 @@ public class PaymentLinkResponse {
                 .redirectUrl(link.getRedirectUrl())
                 .createdAt(link.getCreatedAt())
                 .updatedAt(link.getUpdatedAt())
+                .logoUrl(link.getLogoUrl())
+                .brandColor(link.getBrandColor())
+                .accentColor(link.getAccentColor())
+                .thankYouMessage(link.getThankYouMessage())
                 .build();
     }
 }

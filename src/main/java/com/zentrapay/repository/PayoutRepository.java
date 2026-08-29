@@ -4,6 +4,8 @@ import com.zentrapay.entity.Payout;
 import com.zentrapay.entity.PayoutStatus;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -41,4 +43,12 @@ public interface PayoutRepository extends JpaRepository<Payout, UUID> {
 
     /** A single payout scoped to the seller who owns the underlying payment. */
     Optional<Payout> findByIdAndPaymentPaymentLinkUserId(UUID id, UUID userId);
+
+    // ---- Aggregate queries for earnings summary ----
+
+    /** Per-currency payout counts grouped by status. */
+    @Query("SELECT p.currency, p.status, COUNT(p) FROM Payout p "
+            + "WHERE p.payment.paymentLink.user.id = :userId "
+            + "GROUP BY p.currency, p.status")
+    List<Object[]> countPayoutsByCurrencyAndStatus(@Param("userId") UUID userId);
 }

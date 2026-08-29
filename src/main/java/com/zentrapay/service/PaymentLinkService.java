@@ -82,6 +82,10 @@ public class PaymentLinkService {
                 .currentUses(0)
                 .expiresAt(request.getExpiresAt())
                 .redirectUrl(request.getRedirectUrl())
+                .logoUrl(request.getLogoUrl())
+                .brandColor(request.getBrandColor())
+                .accentColor(request.getAccentColor())
+                .thankYouMessage(request.getThankYouMessage())
                 .build();
 
         PaymentLink saved = paymentLinkRepository.save(link);
