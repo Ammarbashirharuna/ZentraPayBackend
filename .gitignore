@@ -12,6 +12,7 @@ target/
 .idea/
 *.iml
 .vscode/
+.fleet/
 
 # OS
 .DS_Store
@@ -21,8 +22,12 @@ Thumbs.db
 logs/
 *.log
 
-./docs
+# Maven wrapper (optional, some teams track it)
+# .mvn/
 
 # Node
 node_modules/
 .next/
+
+# Docker
+*.log

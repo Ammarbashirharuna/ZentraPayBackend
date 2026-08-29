@@ -1,6 +1,8 @@
 package com.zentrapay.controller;
 
 import com.zentrapay.dto.ApiResponse;
+import com.zentrapay.dto.payment.AnalyticsResponse;
+import com.zentrapay.dto.payment.EarningsSummaryResponse;
 import com.zentrapay.dto.payment.PaymentResponse;
 import com.zentrapay.entity.PaymentStatus;
 import com.zentrapay.service.PaymentQueryService;
@@ -53,5 +55,21 @@ public class PaymentController {
             @PageableDefault(size = 20) Pageable pageable) {
         Page<PaymentResponse> page = paymentQueryService.listPaymentsForLink(linkId, pageable);
         return ResponseEntity.ok(ApiResponse.success(page, "Payments retrieved"));
+    }
+
+    @GetMapping("/summary")
+    @Operation(summary = "Earnings summary",
+            description = "Aggregated earnings across all currencies: gross collected, fees, net paid, and per-currency breakdown.")
+    public ResponseEntity<ApiResponse<EarningsSummaryResponse>> summary() {
+        EarningsSummaryResponse response = paymentQueryService.getMySummary();
+        return ResponseEntity.ok(ApiResponse.success(response, "Earnings summary retrieved"));
+    }
+
+    @GetMapping("/analytics")
+    @Operation(summary = "Seller analytics",
+            description = "Daily revenue trends for the last 30 days and per-link performance metrics.")
+    public ResponseEntity<ApiResponse<AnalyticsResponse>> analytics() {
+        AnalyticsResponse response = paymentQueryService.getMyAnalytics();
+        return ResponseEntity.ok(ApiResponse.success(response, "Analytics retrieved"));
     }
 }

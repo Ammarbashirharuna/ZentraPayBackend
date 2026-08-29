@@ -42,13 +42,16 @@ public class SwaggerConfig {
                         .title("ZentraPay API Documentation")
                         .version("1.0.0")
                         .description(
-                                "Payment link generation platform - RESTful API documentation\n\n" +
+                                "ZentraPay - Pan-African payment link platform\n\n" +
                                         "**Features:**\n" +
                                         "- User authentication with JWT\n" +
                                         "- Email verification via Resend\n" +
-                                        "- Bank account management\n" +
-                                        "- Payment link generation\n" +
-                                        "- Paystack integration\n\n" +
+                                        "- Payout account management (bank, mobile money, EFT)\n" +
+                                        "- Payment link generation with custom branding\n" +
+                                        "- CashOnRails integration (HMAC + RSA signing)\n" +
+                                        "- Earnings summary and analytics\n" +
+                                        "- Referral program\n" +
+                                        "- API key management\n\n" +
                                         "**Authentication:**\n" +
                                         "All endpoints (except /auth/**) require JWT Bearer token.\n" +
                                         "1. Register or login\n" +

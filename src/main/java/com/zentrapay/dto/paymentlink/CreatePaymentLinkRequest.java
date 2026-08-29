@@ -53,4 +53,21 @@ public class CreatePaymentLinkRequest {
 
     /** Optional post-payment redirect URL. */
     private String redirectUrl;
+
+    // ---- Checkout branding ----
+
+    /** Seller's logo URL displayed on the checkout page. */
+    private String logoUrl;
+
+    /** Primary brand color (hex, e.g. #FF5733). */
+    @Pattern(regexp = "^#[0-9A-Fa-f]{6}$", message = "brandColor must be a valid hex color (e.g. #FF5733)")
+    private String brandColor;
+
+    /** Accent color for buttons/highlights (hex). */
+    @Pattern(regexp = "^#[0-9A-Fa-f]{6}$", message = "accentColor must be a valid hex color (e.g. #FF5733)")
+    private String accentColor;
+
+    /** Custom thank-you message shown after successful payment. */
+    @Size(max = 1000, message = "Thank-you message must be at most 1000 characters")
+    private String thankYouMessage;
 }

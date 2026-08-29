@@ -37,6 +37,7 @@ public class PaymentConfirmationService {
     private final PaymentLinkRepository paymentLinkRepository;
     private final PaymentProvider paymentProvider;
     private final PayoutService payoutService;
+    private final EmailService emailService;
 
     /**
      * Confirm a payment by our reference. Returns the resulting payment status
@@ -85,6 +86,11 @@ public class PaymentConfirmationService {
         // record and attempts it, so a provider failure never loses the money
         // owed — reconciliation retries it out of band.
         payoutService.createAndAttempt(payment);
+
+        // Send notification emails. These are fire-and-forget: email failure
+        // must never roll back or affect the money path.
+        sendPaymentNotifications(payment);
+
         return PaymentStatus.COMPLETED.name();
     }
 
@@ -101,6 +107,23 @@ public class PaymentConfirmationService {
         }
         paymentLinkRepository.save(link);
         log.info("Payment {} marked COMPLETED", payment.getProviderReference());
+    }
+
+    private void sendPaymentNotifications(Payment payment) {
+        try {
+            PaymentLink link = payment.getPaymentLink();
+            // Notify the seller
+            if (link.getUser() != null) {
+                emailService.sendPaymentReceivedEmail(link.getUser(), payment, link);
+            }
+            // Send receipt to the customer
+            if (payment.getCustomerEmail() != null && !payment.getCustomerEmail().isBlank()) {
+                emailService.sendPaymentReceiptEmail(payment.getCustomerEmail(), payment, link);
+            }
+        } catch (Exception ex) {
+            // Never let email failure affect the money path.
+            log.error("Failed to send payment notifications: {}", ex.getMessage());
+        }
     }
 
 }
