@@ -4,6 +4,8 @@ import com.zentrapay.entity.Payment;
 import com.zentrapay.entity.PaymentLink;
 import com.zentrapay.entity.PaymentLinkStatus;
 import com.zentrapay.entity.PaymentStatus;
+import com.zentrapay.exception.BusinessRuleException;
+import com.zentrapay.exception.ResourceNotFoundException;
 import com.zentrapay.provider.PaymentProvider;
 import com.zentrapay.provider.VerificationResult;
 import com.zentrapay.repository.PaymentLinkRepository;
@@ -18,12 +20,11 @@ import java.time.LocalDateTime;
 /**
  * Confirms payments authoritatively and settles funds to the seller.
  *
- * This is the single place that decides a payment succeeded — reached from both
- * the browser callback and the provider webhook. It is idempotent: a payment
- * already COMPLETED is never processed (or paid out) twice, so duplicate
- * webhooks and a callback racing a webhook are both safe.
+ * Single source of truth for payment success — reached from both the browser
+ * callback and the provider webhook. Idempotent: a payment already COMPLETED
+ * is never processed (or paid out) twice.
  *
- * On success we:
+ * On success:
  * 1. Re-verify with the provider (never trust the redirect/webhook body alone).
  * 2. Mark the payment COMPLETED and bump the link's usage counters.
  * 3. Pay the seller their amount minus the platform fee.
@@ -39,10 +40,6 @@ public class PaymentConfirmationService {
     private final PayoutService payoutService;
     private final EmailService emailService;
 
-    /**
-     * Confirm a payment by our reference. Returns the resulting payment status
-     * name. Safe to call repeatedly.
-     */
     @Transactional
     public String confirmByReference(String reference) {
         if (reference == null || reference.isBlank()) {
@@ -50,9 +47,9 @@ public class PaymentConfirmationService {
         }
 
         Payment payment = paymentRepository.findByProviderReference(reference)
-                .orElseThrow(() -> new IllegalArgumentException("Unknown payment reference"));
+                .orElseThrow(() -> new ResourceNotFoundException("Unknown payment reference: " + reference));
 
-        // Idempotency: if we already settled this payment, do nothing further.
+        // Idempotency: already settled — do nothing.
         if (payment.getStatus() == PaymentStatus.COMPLETED) {
             log.info("Payment {} already completed; skipping", reference);
             return payment.getStatus().name();
@@ -61,7 +58,6 @@ public class PaymentConfirmationService {
         VerificationResult verification = paymentProvider.verify(reference);
 
         if (!verification.isSuccess()) {
-            // Only downgrade a still-pending payment; never overwrite COMPLETED.
             if (verification.status() == com.zentrapay.provider.ProviderStatus.FAILED
                     || verification.status() == com.zentrapay.provider.ProviderStatus.ABANDONED) {
                 payment.setStatus(PaymentStatus.FAILED);
@@ -72,23 +68,18 @@ public class PaymentConfirmationService {
             return payment.getStatus().name();
         }
 
-        // Defense in depth: the paid amount/currency must match what we asked for.
+        // Defense in depth: paid amount/currency must match what we asked for.
         if (verification.amount() != payment.getAmount()
                 || !verification.currency().equalsIgnoreCase(payment.getCurrency())) {
             log.error("Payment {} amount/currency mismatch: expected {} {}, provider reported {} {}",
                     reference, payment.getAmount(), payment.getCurrency(),
                     verification.amount(), verification.currency());
-            throw new IllegalStateException("Payment amount mismatch; refusing to settle.");
+            throw new BusinessRuleException("PAYMENT_AMOUNT_MISMATCH",
+                    "Payment amount mismatch; refusing to settle.");
         }
 
         markCompleted(payment);
-        // Settlement is durable and retryable: PayoutService persists a payout
-        // record and attempts it, so a provider failure never loses the money
-        // owed — reconciliation retries it out of band.
         payoutService.createAndAttempt(payment);
-
-        // Send notification emails. These are fire-and-forget: email failure
-        // must never roll back or affect the money path.
         sendPaymentNotifications(payment);
 
         return PaymentStatus.COMPLETED.name();
@@ -112,18 +103,14 @@ public class PaymentConfirmationService {
     private void sendPaymentNotifications(Payment payment) {
         try {
             PaymentLink link = payment.getPaymentLink();
-            // Notify the seller
             if (link.getUser() != null) {
                 emailService.sendPaymentReceivedEmail(link.getUser(), payment, link);
             }
-            // Send receipt to the customer
             if (payment.getCustomerEmail() != null && !payment.getCustomerEmail().isBlank()) {
                 emailService.sendPaymentReceiptEmail(payment.getCustomerEmail(), payment, link);
             }
         } catch (Exception ex) {
-            // Never let email failure affect the money path.
             log.error("Failed to send payment notifications: {}", ex.getMessage());
         }
     }
-
 }

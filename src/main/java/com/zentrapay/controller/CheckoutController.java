@@ -29,7 +29,7 @@ public class CheckoutController {
     @GetMapping("/{shortCode}")
     @Operation(summary = "View payment link", description = "Public details for rendering the checkout page.")
     public ResponseEntity<ApiResponse<PublicPaymentLinkResponse>> view(@PathVariable String shortCode) {
-        PublicPaymentLinkResponse response = checkoutService.getPublicLink(shortCode);
+        PublicPaymentLinkResponse response = checkoutService.getPublicPaymentLink(shortCode);
         return ResponseEntity.ok(ApiResponse.success(response, "Payment link retrieved"));
     }
 
