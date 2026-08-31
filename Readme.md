@@ -1,4 +1,4 @@
-# ZentraPay Backend API
+# ZetaPay Backend API
 
 **Version:** 1.0.0  
 **Framework:** Spring Boot 3.2.3  
