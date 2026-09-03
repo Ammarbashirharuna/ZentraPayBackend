@@ -38,7 +38,7 @@ class PayoutServiceTest {
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(service, "feeBasisPoints", 100L); // 1%
-        ReflectionTestUtils.setField(service, "senderName", "ZentraPay");
+        ReflectionTestUtils.setField(service, "senderName", "Zetapay");
     }
 
     private Payment payment(long amount) {

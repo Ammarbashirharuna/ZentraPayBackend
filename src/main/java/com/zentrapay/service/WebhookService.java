@@ -8,25 +8,27 @@ import com.zentrapay.provider.ProviderStatus;
 import com.zentrapay.repository.WebhookEventRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 
 /**
- * Processes inbound CashOnRails webhooks.
+ * Processes inbound Paystack webhooks.
  *
- * Order matters for security: verify authenticity (signature, then the optional
- * bearer key) BEFORE parsing or acting on anything in the body. Only then do we
- * extract our reference and hand off to {@link PaymentConfirmationService},
- * which is itself idempotent so repeated deliveries are harmless.
+ * Paystack sends:
+ * - charge.success, charge.failed, charge.abandoned — payment events
+ * - transfer.success, transfer.failed, transfer.pending — payout events
+ * - transfer.reversed — payout reversal
+ *
+ * Signature: x-paystack-signature header = HMAC-SHA512 of raw body using
+ * the Paystack secret key.
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class WebhookService {
 
-    private static final String PROVIDER_TYPE = "CASHONRAILS";
+    private static final String PROVIDER_TYPE = "PAYSTACK";
 
     private final PaymentProvider paymentProvider;
     private final PaymentConfirmationService paymentConfirmationService;
@@ -34,15 +36,7 @@ public class WebhookService {
     private final WebhookEventRepository webhookEventRepository;
     private final ObjectMapper objectMapper;
 
-    /** Optional shared secret expected in the webhook Authorization header. */
-    @Value("${cashonrails.webhook-key:}")
-    private String webhookKey;
-
-    /**
-     * @return true if the webhook was authentic and accepted; false if the
-     *         signature/auth was invalid (caller should return 401).
-     */
-    public boolean handleCashOnRails(String rawPayload, String signature, String authorization) {
+    public boolean handlePaystack(String rawPayload, String signature) {
         if (rawPayload == null || rawPayload.isBlank()) {
             log.warn("Empty webhook payload received");
             return false;
@@ -53,34 +47,30 @@ public class WebhookService {
             return false;
         }
 
-        // Optional second factor: a static bearer key, if configured.
-        if (webhookKey != null && !webhookKey.isBlank()) {
-            String expected = "Bearer " + webhookKey;
-            if (authorization == null
-                    || !constantTimeEquals(authorization, expected)) {
-                log.warn("Webhook Authorization header did not match configured key");
-                return false;
-            }
-        }
-
-        // Authentic: record it before acting, so we have an audit trail even if
-        // processing throws. Only authenticated events are persisted.
         WebhookEvent event = persistEvent(rawPayload, signature);
 
         try {
             JsonNode root = objectMapper.readTree(rawPayload);
-            markEventType(event, root);
-            String reference = extractReference(root);
-            if (reference == null) {
-                log.warn("Webhook payload had no usable reference; acknowledging without action");
-                markProcessed(event, "No usable reference in payload");
+            String eventType = root.has("event") ? root.get("event").asText() : null;
+            markEventType(event, eventType);
+
+            JsonNode data = root.get("data");
+            if (data == null) {
+                log.warn("Webhook payload has no data field; acknowledging without action");
+                markProcessed(event, "No data field in payload");
                 return true;
             }
 
-            // Our payout references are prefixed PO-; a transfer/payout event
-            // updates the settlement, everything else confirms a payment.
-            if (isTransferEvent(root, reference)) {
-                String rawStatus = extractStatus(root);
+            String reference = text(data, "reference");
+            if (reference == null) {
+                log.warn("Webhook payload had no reference; acknowledging without action");
+                markProcessed(event, "No reference in payload");
+                return true;
+            }
+
+            // Transfer events update the payout, everything else confirms a payment
+            if (isTransferEvent(eventType, reference)) {
+                String rawStatus = text(data, "status");
                 payoutService.applyTransferStatus(
                         reference, ProviderStatus.fromRaw(rawStatus), rawStatus);
                 log.info("Transfer webhook processed for payout {} -> {}", reference, rawStatus);
@@ -90,8 +80,6 @@ public class WebhookService {
             }
             markProcessed(event, null);
         } catch (Exception ex) {
-            // Authentic but unprocessable: log, record the failure for later
-            // replay, and still acknowledge so the provider does not hammer us.
             log.error("Failed to process authentic webhook: {}", ex.getMessage(), ex);
             markFailed(event, ex);
         }
@@ -108,26 +96,20 @@ public class WebhookService {
                     .retryCount(0)
                     .build());
         } catch (Exception ex) {
-            // Never let an audit-write failure break webhook handling.
             log.error("Could not persist webhook event: {}", ex.getMessage());
             return null;
         }
     }
 
-    private void markEventType(WebhookEvent event, JsonNode root) {
-        if (event == null) {
-            return;
-        }
-        JsonNode ev = root.get("event");
-        if (ev != null && ev.isTextual()) {
-            event.setEventType(ev.asText());
+    private void markEventType(WebhookEvent event, String eventType) {
+        if (event == null) return;
+        if (eventType != null) {
+            event.setEventType(eventType);
         }
     }
 
     private void markProcessed(WebhookEvent event, String note) {
-        if (event == null) {
-            return;
-        }
+        if (event == null) return;
         try {
             event.setProcessed(true);
             event.setProcessedAt(LocalDateTime.now());
@@ -139,9 +121,7 @@ public class WebhookService {
     }
 
     private void markFailed(WebhookEvent event, Exception cause) {
-        if (event == null) {
-            return;
-        }
+        if (event == null) return;
         try {
             event.setProcessed(false);
             event.setErrorMessage(cause.getMessage());
@@ -151,61 +131,16 @@ public class WebhookService {
         }
     }
 
-    /**
-     * A transfer/payout event, identified by either the event name (transfer.*)
-     * or our PO- payout reference prefix. The prefix check is the reliable
-     * signal since we control it; the event name is a secondary hint.
-     */
-    private boolean isTransferEvent(JsonNode root, String reference) {
+    private boolean isTransferEvent(String eventType, String reference) {
         if (reference != null && reference.startsWith("PO-")) {
             return true;
         }
-        JsonNode ev = root.get("event");
-        return ev != null && ev.isTextual() && ev.asText().toLowerCase().startsWith("transfer");
+        return eventType != null && eventType.toLowerCase().startsWith("transfer");
     }
 
-    /** Pull the status string out of the payload (top-level or nested in data). */
-    private String extractStatus(JsonNode root) {
-        JsonNode status = root.get("status");
-        if (status != null && status.isTextual()) {
-            return status.asText();
-        }
-        JsonNode data = root.get("data");
-        if (data != null) {
-            JsonNode nested = data.get("status");
-            if (nested != null && nested.isTextual()) {
-                return nested.asText();
-            }
-        }
-        return null;
-    }
-
-    /** Pull our transaction reference out of the (provider-shaped) payload. */
-    private String extractReference(JsonNode root) {
-        for (String path : new String[]{"reference", "data"}) {
-            JsonNode node = root.get(path);
-            if (node == null) {
-                continue;
-            }
-            if (node.isTextual()) {
-                return node.asText();
-            }
-            JsonNode ref = node.get("reference");
-            if (ref != null && ref.isTextual()) {
-                return ref.asText();
-            }
-        }
-        return null;
-    }
-
-    private boolean constantTimeEquals(String a, String b) {
-        if (a.length() != b.length()) {
-            return false;
-        }
-        int result = 0;
-        for (int i = 0; i < a.length(); i++) {
-            result |= a.charAt(i) ^ b.charAt(i);
-        }
-        return result == 0;
+    private String text(JsonNode node, String key) {
+        if (node == null) return null;
+        JsonNode value = node.get(key);
+        return value != null && !value.isNull() ? value.asText() : null;
     }
 }

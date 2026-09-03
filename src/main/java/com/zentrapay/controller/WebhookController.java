@@ -26,20 +26,17 @@ public class WebhookController {
 
     private final WebhookService webhookService;
 
-    @PostMapping("/cashonrails")
-    @Operation(summary = "CashOnRails webhook",
-            description = "Receives payment/transfer events. Verified by signature.")
-    public ResponseEntity<String> cashOnRails(
+    @PostMapping("/paystack")
+    @Operation(summary = "Paystack webhook",
+            description = "Receives payment/transfer events. Verified by HMAC-SHA512 signature.")
+    public ResponseEntity<String> paystack(
             @RequestBody(required = false) String rawPayload,
-            @RequestHeader(value = "payloadsignature", required = false) String signature,
-            @RequestHeader(value = "Authorization", required = false) String authorization) {
+            @RequestHeader(value = "x-paystack-signature", required = false) String signature) {
 
-        boolean accepted = webhookService.handleCashOnRails(rawPayload, signature, authorization);
+        boolean accepted = webhookService.handlePaystack(rawPayload, signature);
         if (!accepted) {
-            // 401 on bad signature so the provider knows to retry / we can alert.
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("invalid signature");
         }
-        // Always 200 once authentic so the provider stops retrying.
         return ResponseEntity.ok("ok");
     }
 }

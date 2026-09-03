@@ -1,6 +1,6 @@
 # Architecture Decisions
 
-This document records the significant technical decisions behind ZentraPay's
+This document records the significant technical decisions behind Zetapay's
 payment flow and why they were made.
 
 ## 1. A single `PaymentProvider` interface, not direct vendor calls

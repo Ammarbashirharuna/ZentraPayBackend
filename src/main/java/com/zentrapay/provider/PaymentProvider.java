@@ -3,16 +3,14 @@ package com.zentrapay.provider;
 /**
  * Payment Provider abstraction.
  *
- * ZentraPay talks to the outside payments world ONLY through this interface.
- * The concrete implementation ({@link CashOnRailsClient}) knows the vendor
+ * Zetapay talks to the outside payments world ONLY through this interface.
+ * The concrete implementation ({@link com.zentrapay.provider.paystack.PaystackClient}) knows the vendor
  * specifics (endpoints, signing, field names); the rest of the application
  * depends only on this contract.
  *
  * Why an interface (and not direct calls to CashOnRails)?
- * - The project was previously wired directly to Paystack and switching cost
- *   real churn. A thin abstraction makes the next switch — or adding a second
- *   provider for a region CashOnRails does not cover — a new class, not a
- *   rewrite.
+ * - A thin abstraction makes switching providers or adding a second provider
+ *   a new class, not a rewrite.
  * - It keeps vendor concepts (access codes, HMAC/RSA signatures, encrypted
  *
  *   payloads) out of the domain and services.
@@ -20,7 +18,7 @@ package com.zentrapay.provider;
  * Money model note:
  * CashOnRails has no "split/subaccount" concept. Funds are collected into the
  * platform wallet and later paid out to the seller via {@link #payout}. That
- * collect-then-payout shape is intentional — it is what lets ZentraPay deduct
+ * collect-then-payout shape is intentional — it is what lets Zetapay deduct
  * a platform fee on the spread.
  */
 public interface

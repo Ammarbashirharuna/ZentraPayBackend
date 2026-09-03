@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
- * An API key for programmatic access to ZentraPay.
+ * An API key for programmatic access to Zetapay.
  *
  * Maps to: api_keys (see V10 migration).
  *

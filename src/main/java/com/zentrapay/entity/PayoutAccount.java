@@ -20,7 +20,7 @@ import java.util.UUID;
  * Pan-African by design: carries country + currency + method so the same model
  * serves a Nigerian bank account, a Kenyan M-Pesa wallet, or a South African
  * EFT account. Provider-neutral: {@code providerRecipientCode} holds whatever
- * reference the current provider (CashOnRails) needs, if any.
+ * reference the current provider (Paystack) needs, if any.
  *
  * Flow:
  * 1. Seller enters account number + bank/institution code + currency.
@@ -77,8 +77,8 @@ public class PayoutAccount {
 
     /**
      * Provider recipient/reference code, if the provider issues one.
-     * Nullable: CashOnRails transfers by raw account details and does not
-     * require a pre-created recipient, unlike Paystack subaccounts.
+     * Nullable: Paystack requires transfer recipients to be pre-created
+     * for payouts.
      */
     @Column(name = "provider_recipient_code", length = 100)
     private String providerRecipientCode;
