@@ -29,7 +29,7 @@ class WebhookServiceTest {
     void rejectsInvalidSignatureWithoutProcessing() {
         when(paymentProvider.verifyWebhookSignature(anyString(), any())).thenReturn(false);
 
-        boolean accepted = service.handleCashOnRails("{\"reference\":\"ZP-1\"}", "bad", null);
+        boolean accepted = service.handlePaystack("{\"reference\":\"ZP-1\"}", "bad");
 
         assertThat(accepted).isFalse();
         verify(confirmationService, never()).confirmByReference(anyString());
@@ -37,33 +37,45 @@ class WebhookServiceTest {
 
     @Test
     void rejectsEmptyPayload() {
-        boolean accepted = service.handleCashOnRails("  ", "sig", null);
+        boolean accepted = service.handlePaystack("  ", "sig");
         assertThat(accepted).isFalse();
         verifyNoInteractions(paymentProvider);
     }
 
     @Test
     void processesAuthenticWebhookAndExtractsNestedReference() {
-        ReflectionTestUtils.setField(service, "webhookKey", "");
         when(paymentProvider.verifyWebhookSignature(anyString(), any())).thenReturn(true);
         when(confirmationService.confirmByReference("ZP-99")).thenReturn("COMPLETED");
 
-        boolean accepted = service.handleCashOnRails(
-                "{\"event\":\"charge.success\",\"data\":{\"reference\":\"ZP-99\"}}", "sig", null);
+        boolean accepted = service.handlePaystack(
+                "{\"event\":\"charge.success\",\"data\":{\"reference\":\"ZP-99\"}}", "sig");
 
         assertThat(accepted).isTrue();
         verify(confirmationService).confirmByReference("ZP-99");
     }
 
     @Test
-    void rejectsWhenBearerKeyConfiguredButMissing() {
-        ReflectionTestUtils.setField(service, "webhookKey", "topsecret");
+    void processesTransferWebhook() {
         when(paymentProvider.verifyWebhookSignature(anyString(), any())).thenReturn(true);
 
-        boolean accepted = service.handleCashOnRails(
-                "{\"reference\":\"ZP-1\"}", "sig", null);
+        boolean accepted = service.handlePaystack(
+                "{\"event\":\"transfer.success\",\"data\":{\"reference\":\"PO-ZP-1\",\"status\":\"success\"}}", "sig");
 
-        assertThat(accepted).isFalse();
-        verify(confirmationService, never()).confirmByReference(anyString());
+        assertThat(accepted).isTrue();
+        verify(payoutService).applyTransferStatus("PO-ZP-1",
+                com.zentrapay.provider.ProviderStatus.SUCCESS, "success");
+    }
+
+    @Test
+    void acknowledgesWebhookEvenOnProcessingFailure() {
+        when(paymentProvider.verifyWebhookSignature(anyString(), any())).thenReturn(true);
+        when(confirmationService.confirmByReference("ZP-err"))
+                .thenThrow(new RuntimeException("db error"));
+
+        boolean accepted = service.handlePaystack(
+                "{\"event\":\"charge.success\",\"data\":{\"reference\":\"ZP-err\"}}", "sig");
+
+        // Still returns true (200) so Paystack doesn't retry, but error is logged
+        assertThat(accepted).isTrue();
     }
 }

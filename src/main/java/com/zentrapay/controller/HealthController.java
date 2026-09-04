@@ -22,7 +22,7 @@ public class HealthController {
     )
     public ApiResponse<Map<String, Object>> healthCheck() {
         Map<String, Object> health = new HashMap<>();
-        health.put("service", "ZentraPay Backend");
+        health.put("service", "Zetapay Backend");
         health.put("status", "UP");
         health.put("version", "1.0.0");
 

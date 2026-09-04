@@ -8,7 +8,7 @@
 
 ## Overview
 
-RESTful API backend for ZentraPay — a **Pan-African payment link generation platform**. Built with Spring Boot, this service handles user authentication, payment link management, payment processing, webhooks, settlement, and seller analytics.
+RESTful API backend for Zetapay — a **Pan-African payment link generation platform**. Built with Spring Boot, this service handles user authentication, payment link management, payment processing, webhooks, settlement, and seller analytics.
 
 ---
 

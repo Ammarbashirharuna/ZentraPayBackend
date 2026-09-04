@@ -2,7 +2,7 @@ package com.zentrapay.provider;
 
 /**
  * Normalized transaction/transfer status, mapped from provider-specific
- * strings. CashOnRails reports: success, pending, failed, abandoned.
+ * strings. Paystack reports: success, pending, failed, abandoned.
  */
 public enum
 ProviderStatus {

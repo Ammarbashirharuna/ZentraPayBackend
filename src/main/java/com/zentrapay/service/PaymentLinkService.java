@@ -6,6 +6,7 @@ import com.zentrapay.entity.PayoutAccount;
 import com.zentrapay.entity.PaymentLink;
 import com.zentrapay.entity.PaymentLinkStatus;
 import com.zentrapay.entity.User;
+import com.zentrapay.exception.BusinessRuleException;
 import com.zentrapay.exception.ResourceNotFoundException;
 import com.zentrapay.repository.PayoutAccountRepository;
 import com.zentrapay.repository.PaymentLinkRepository;
@@ -60,12 +61,12 @@ public class PaymentLinkService {
 
         PayoutAccount payoutAccount = payoutAccountRepository
                 .findByUserIdAndIsActiveTrue(currentUser.getId())
-                .orElseThrow(() -> new IllegalStateException(
-                        "Set up an active payout account before creating payment links."));
+                .orElseThrow(() -> new BusinessRuleException(
+                        "NO_PAYOUT_ACCOUNT", "Set up an active payout account before creating payment links."));
 
         if (Boolean.FALSE.equals(payoutAccount.getAccountValidated())) {
-            throw new IllegalStateException(
-                    "Your payout account is not validated yet.");
+            throw new BusinessRuleException(
+                    "ACCOUNT_NOT_VALIDATED", "Your payout account is not validated yet.");
         }
 
         PaymentLink link = PaymentLink.builder()
@@ -125,7 +126,7 @@ public class PaymentLinkService {
                 return code;
             }
         }
-        throw new IllegalStateException("Could not generate a unique payment link code, please retry.");
+        throw new BusinessRuleException("CODE_GENERATION_FAILED", "Could not generate a unique payment link code, please retry.");
     }
 
     private String randomCode() {

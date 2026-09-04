@@ -74,16 +74,14 @@ public class AuthController {
     @GetMapping("/verify")
     @Operation(
             summary = "Verify email address",
-            description = "Verifies user email using the token sent to their inbox"
+            description = "Verifies user email using the token sent to their inbox. Redirects to frontend."
     )
-    public ResponseEntity<ApiResponse<String>> verifyEmail(
+    public ResponseEntity<Void> verifyEmail(
             @RequestParam String token
     ) {
         authService.verifyEmail(token);
-        return ResponseEntity.ok(
-                ApiResponse.success(
-                        "Email verified successfully. You can now login."
-                )
-        );
+        return ResponseEntity.status(
+                org.springframework.http.HttpStatus.FOUND
+        ).header("Location", "http://localhost:3000/verify-email?status=success").build();
     }
 }

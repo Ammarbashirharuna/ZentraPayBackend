@@ -39,16 +39,16 @@ public class SwaggerConfig {
         return new OpenAPI()
                 // API metadata
                 .info(new Info()
-                        .title("ZentraPay API Documentation")
+                        .title("Zetapay API Documentation")
                         .version("1.0.0")
                         .description(
-                                "ZentraPay - Pan-African payment link platform\n\n" +
+                                "Zetapay - Pan-African payment link platform\n\n" +
                                         "**Features:**\n" +
                                         "- User authentication with JWT\n" +
                                         "- Email verification via Resend\n" +
                                         "- Payout account management (bank, mobile money, EFT)\n" +
                                         "- Payment link generation with custom branding\n" +
-                                        "- CashOnRails integration (HMAC + RSA signing)\n" +
+                                        "- Paystack integration (HMAC-SHA512 webhook verification)\n" +
                                         "- Earnings summary and analytics\n" +
                                         "- Referral program\n" +
                                         "- API key management\n\n" +

@@ -40,8 +40,7 @@ class CheckoutServiceTest {
 
     @BeforeEach
     void setUp() {
-        ReflectionTestUtils.setField(service, "appBaseUrl", "http://localhost:8080");
-        ReflectionTestUtils.setField(service, "reuseWindowMinutes", 30L);
+        ReflectionTestUtils.setField(service, "idempotencyWindowMinutes", 5);
     }
 
     private PaymentLink payableLink() {
@@ -74,7 +73,7 @@ class CheckoutServiceTest {
                 new InitiatePaymentRequest("buyer@example.com"));
 
         assertThat(response.getCheckoutUrl()).isEqualTo("https://pay.test/checkout");
-        assertThat(response.getReference()).startsWith("ZP-");
+        assertThat(response.getReference()).startsWith("ZR-");
         verify(paymentRepository).save(any(Payment.class));
     }
 
@@ -100,7 +99,6 @@ class CheckoutServiceTest {
                 new InitiatePaymentRequest("buyer@example.com"));
 
         assertThat(response.getReference()).isEqualTo("ZP-existing");
-        // No new payment row is created on reuse.
         verify(paymentRepository, never()).save(any(Payment.class));
     }
 

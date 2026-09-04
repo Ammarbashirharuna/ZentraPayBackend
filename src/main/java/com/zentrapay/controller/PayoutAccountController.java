@@ -1,6 +1,7 @@
 package com.zentrapay.controller;
 
 import com.zentrapay.dto.ApiResponse;
+import com.zentrapay.dto.payout.BankInfo;
 import com.zentrapay.dto.payout.PayoutAccountResponse;
 import com.zentrapay.dto.payout.SavePayoutAccountRequest;
 import com.zentrapay.dto.payout.ValidateAccountRequest;
@@ -32,6 +33,15 @@ import org.springframework.web.bind.annotation.*;
 public class PayoutAccountController {
 
     private final PayoutAccountService payoutAccountService;
+
+    @GetMapping("/banks")
+    @Operation(summary = "List banks",
+            description = "List all banks supported by Paystack for a given country (e.g. nigeria, ghana, kenya, south-africa).")
+    public ResponseEntity<ApiResponse<java.util.List<BankInfo>>> listBanks(
+            @RequestParam(defaultValue = "nigeria") String country) {
+        java.util.List<BankInfo> banks = payoutAccountService.listBanks(country);
+        return ResponseEntity.ok(ApiResponse.success(banks, "Banks retrieved"));
+    }
 
     @PostMapping("/validate")
     @Operation(summary = "Validate payout account",

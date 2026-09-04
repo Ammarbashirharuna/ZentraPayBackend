@@ -1,8 +1,8 @@
 # Revenue Model
 
-## How ZentraPay makes money
+## How Zetapay makes money
 
-ZentraPay charges a **platform fee on every successful payment**, taken from the
+Zetapay charges a **platform fee on every successful payment**, taken from the
 spread between what the customer pays and what the seller receives.
 
 - The customer pays the full link amount `A`.

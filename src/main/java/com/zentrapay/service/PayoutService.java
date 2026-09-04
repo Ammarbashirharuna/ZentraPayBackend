@@ -40,7 +40,7 @@ public class PayoutService {
     @Value("${platform.fee-basis-points:100}")
     private long feeBasisPoints;
 
-    @Value("${cashonrails.sender-name:ZentraPay}")
+    @Value("${paystack.sender-name:Zetapay}")
     private String senderName;
 
     /**
@@ -111,7 +111,7 @@ public class PayoutService {
                     .amount(payout.getAmount())
                     .currency(payout.getCurrency())
                     .senderName(senderName)
-                    .narration("ZentraPay settlement " + payout.getReference())
+                    .narration("Zetapay settlement " + payout.getReference())
                     .reference(payout.getReference())
                     .type(payoutTypeHint(account))
                     .build());

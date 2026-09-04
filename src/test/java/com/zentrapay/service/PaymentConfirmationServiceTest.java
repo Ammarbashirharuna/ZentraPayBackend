@@ -6,6 +6,7 @@ import com.zentrapay.entity.PaymentLinkStatus;
 import com.zentrapay.entity.PaymentStatus;
 import com.zentrapay.entity.PayoutAccount;
 import com.zentrapay.entity.PayoutMethod;
+import com.zentrapay.exception.BusinessRuleException;
 import com.zentrapay.provider.PaymentProvider;
 import com.zentrapay.provider.ProviderStatus;
 import com.zentrapay.provider.VerificationResult;
@@ -100,7 +101,7 @@ class PaymentConfirmationServiceTest {
                 .reference("ZP-ref-1").rawStatus("success").build());
 
         assertThatThrownBy(() -> service.confirmByReference("ZP-ref-1"))
-                .isInstanceOf(IllegalStateException.class);
+                .isInstanceOf(BusinessRuleException.class);
         verify(payoutService, never()).createAndAttempt(any());
     }
 

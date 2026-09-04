@@ -8,8 +8,10 @@ import com.zentrapay.service.CheckoutService;
 import com.zentrapay.service.PaymentConfirmationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,7 +31,7 @@ public class CheckoutController {
     @GetMapping("/{shortCode}")
     @Operation(summary = "View payment link", description = "Public details for rendering the checkout page.")
     public ResponseEntity<ApiResponse<PublicPaymentLinkResponse>> view(@PathVariable String shortCode) {
-        PublicPaymentLinkResponse response = checkoutService.getPublicLink(shortCode);
+        PublicPaymentLinkResponse response = checkoutService.getPublicPaymentLink(shortCode);
         return ResponseEntity.ok(ApiResponse.success(response, "Payment link retrieved"));
     }
 
@@ -46,11 +48,18 @@ public class CheckoutController {
      * Provider redirect target after the customer pays. We verify server-side
      * (never trust the redirect alone) and report the resulting status.
      */
+    @Value("${app.frontend-url:http://localhost:3000}")
+    private String frontendUrl;
+
     @GetMapping("/callback")
     @Operation(summary = "Payment callback",
-            description = "Provider redirect target; verifies the payment server-side.")
-    public ResponseEntity<ApiResponse<String>> callback(@RequestParam(required = false) String reference) {
-        String status = paymentConfirmationService.confirmByReference(reference);
-        return ResponseEntity.ok(ApiResponse.success(status, "Payment status: " + status));
+            description = "Provider redirect target; verifies payment and redirects to branded success page.")
+    public void callback(@RequestParam(required = false) String reference, HttpServletResponse response) throws Exception {
+        try {
+            String status = paymentConfirmationService.confirmByReference(reference);
+            response.sendRedirect(frontendUrl + "/pay/success?reference=" + (reference != null ? reference : "") + "&status=" + status);
+        } catch (Exception e) {
+            response.sendRedirect(frontendUrl + "/pay/success?reference=" + (reference != null ? reference : "") + "&status=FAILED");
+        }
     }
 }
