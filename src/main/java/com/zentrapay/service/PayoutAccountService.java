@@ -1,5 +1,6 @@
 package com.zentrapay.service;
 
+import com.zentrapay.dto.payout.BankInfo;
 import com.zentrapay.dto.payout.PayoutAccountResponse;
 import com.zentrapay.dto.payout.SavePayoutAccountRequest;
 import com.zentrapay.dto.payout.ValidateAccountRequest;
@@ -11,6 +12,7 @@ import com.zentrapay.exception.ResourceNotFoundException;
 import com.zentrapay.provider.AccountValidationRequest;
 import com.zentrapay.provider.AccountValidationResult;
 import com.zentrapay.provider.PaymentProvider;
+import com.zentrapay.provider.paystack.PaystackClient;
 import com.zentrapay.repository.PayoutAccountRepository;
 import com.zentrapay.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -39,11 +41,25 @@ public class PayoutAccountService {
     private final PayoutAccountRepository payoutAccountRepository;
     private final UserRepository userRepository;
     private final PaymentProvider paymentProvider;
+    private final PaystackClient paystackClient;
 
     private User getCurrentUser() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         return userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+    }
+
+    /**
+     * List all supported banks from Paystack for a given country.
+     */
+    public java.util.List<BankInfo> listBanks(String country) {
+        java.util.List<java.util.Map<String, String>> rawBanks = paystackClient.listBanks(country);
+        return rawBanks.stream()
+                .map(b -> BankInfo.builder()
+                        .name(b.get("name"))
+                        .code(b.get("code"))
+                        .build())
+                .toList();
     }
 
     /**

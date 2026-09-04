@@ -25,7 +25,9 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.HexFormat;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -147,6 +149,48 @@ public class PaystackClient implements PaymentProvider {
         } catch (PaymentProviderException e) {
             log.warn("Account validation failed for bank_code {}: {}", request.bankCode(), e.getMessage());
             return AccountValidationResult.builder().valid(false).accountName(null).build();
+        }
+    }
+
+    // ── Bank Listing ─────────────────────────────────────────────────────
+
+    /**
+     * List all banks supported by Paystack for a given country.
+     * Uses the public /bank endpoint (no auth required, but we send it anyway).
+     */
+    public List<Map<String, String>> listBanks(String country) {
+        String path = "/bank?country=" + (country != null ? country : "nigeria");
+        try {
+            // The /bank endpoint is public (no auth required)
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(BASE_URL + path))
+                    .timeout(Duration.ofSeconds(15))
+                    .header("Content-Type", "application/json")
+                    .GET()
+                    .build();
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            JsonNode root = objectMapper.readTree(response.body());
+            boolean httpOk = response.statusCode() >= 200 && response.statusCode() < 300;
+            boolean apiOk = root.has("status") && root.get("status").asBoolean();
+            if (!httpOk || !apiOk) {
+                log.warn("Paystack /bank returned HTTP {} for country {}", response.statusCode(), country);
+                return List.of();
+            }
+            JsonNode data = root.get("data");
+            List<Map<String, String>> banks = new ArrayList<>();
+            if (data != null && data.isArray()) {
+                for (JsonNode node : data) {
+                    Map<String, String> bank = new LinkedHashMap<>();
+                    bank.put("name", text(node, "name") != null ? text(node, "name") : "");
+                    bank.put("code", text(node, "code") != null ? text(node, "code") : "");
+                    bank.put("slug", text(node, "slug") != null ? text(node, "slug") : "");
+                    banks.add(bank);
+                }
+            }
+            return banks;
+        } catch (Exception e) {
+            log.warn("Failed to list banks for country {}: {}", country, e.getMessage());
+            return List.of();
         }
     }
 

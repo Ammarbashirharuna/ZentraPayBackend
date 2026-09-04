@@ -8,7 +8,7 @@ package com.zentrapay.provider;
  * specifics (endpoints, signing, field names); the rest of the application
  * depends only on this contract.
  *
- * Why an interface (and not direct calls to CashOnRails)?
+ * Why an interface (and not direct calls to Paystack)?
  * - A thin abstraction makes switching providers or adding a second provider
  *   a new class, not a rewrite.
  * - It keeps vendor concepts (access codes, HMAC/RSA signatures, encrypted
@@ -16,7 +16,7 @@ package com.zentrapay.provider;
  *   payloads) out of the domain and services.
  *
  * Money model note:
- * CashOnRails has no "split/subaccount" concept. Funds are collected into the
+ * Paystack has no "split/subaccount" concept for payouts. Funds are collected into the
  * platform wallet and later paid out to the seller via {@link #payout}. That
  * collect-then-payout shape is intentional — it is what lets Zetapay deduct
  * a platform fee on the spread.
